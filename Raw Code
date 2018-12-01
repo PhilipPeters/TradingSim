@@ -1,0 +1,12 @@
+# to store the data in a dataframe
+import pandas 
+
+# to access the api (this library needs to be installed (i.e. with pip or sudo), the others do not)
+import requests
+
+# to properly interpret the results of the request
+import json
+
+#for optional argument parsing
+import sys
+
