@@ -1,0 +1,124 @@
+
+""" ENTER YOUR OWN CREDENTIALS refers to the credentials you will receive when you obtain your twitter developers account.
+They are relevant to you, so will be different for different users, so put in your own"""
+
+#Import the necessary methods from tweepy library
+from tweepy.streaming import StreamListener
+from tweepy import OAuthHandler
+from tweepy import Stream
+import sys
+import json
+
+
+#Refined refers to whether we filter the tweets (based on characters such as @ or http
+#or ':') at the end of 
+REFINED = False
+
+
+#How we refine/cleanup the data
+def clean_up(string):
+    new_string = " ".join(list(filter(lambda x:((x[0] != '#') and (x[0] != '@') and ((len(x) >= 1) and x[-1] != ':') and ((len(x) <= 3) or (x[0:4] != 'http')) and ((len(x) <= 1) or x[0:2] != 'RT')), string.split())))
+    if (len(new_string) != 0) and new_string[-1] != '.':
+        new_string = new_string + '.'
+    return new_string
+
+
+
+#Variables that contains the user credentials to access Twitter API 
+consumer_key= 'ENTER YOUR OWN CREDENTIALS'
+consumer_secret= 'ENTER YOUR OWN CREDENTIALS'uy'] 
+access_token= 'ENTER YOUR OWN CREDENTIALS'
+access_token_secret= 'ENTER YOUR OWN CREDENTIALS'
+
+
+positive_words = ['up', 'happy', 'great', 'positive', 'buy', 'good', 'boost']
+negative_words = ['down', 'sad', 'angry', 'negative', 'bad', 'sell', 'drop']
+
+"""Now we use the site https://www.wordfrequency.info/free.asp?s=y to compare word frequencies, so we get accurate sentiment meaning"""
+
+freq_dict = {}
+
+freq_dict['up'] = 795534
+freq_dict['happy'] = 51669
+freq_dict['great'] = 225005
+freq_dict['positive'] = 39310
+freq_dict['buy'] = 101105
+freq_dict['good'] = 353973
+freq_dict['boost'] = 7863
+
+freq_dict['down'] = 329409
+freq_dict['sad'] = 16163
+freq_dict['angry'] = 21485
+freq_dict['negative'] = 26847
+freq_dict['bad'] = 134910
+freq_dict['sell'] = 87865
+freq_dict['drop'] = 12757
+
+from collections import defaultdict
+pos_dict = defaultdict(int)
+neg_dict = defaultdict(int)
+
+#This is a basic listener that just prints received tweets to stdout.
+class StdOutListener(StreamListener):
+
+    def on_data(self, data):
+        data = json.loads(data)
+        if "text" in data:
+            for word in positive_words:
+              if word in data['text']:
+                pos_dict[word] = pos_dict[word] + 1
+            for word in negative_words:
+              if word in data['text']:
+                neg_dict[word] = neg_dict[word] + 1    
+            
+        return True
+
+    def on_error(self, status):
+        #print(status)
+        return
+
+if __name__ == '__main__':
+    
+    reset_count = 0
+    
+    #This handles Twitter authetification and the connection to Twitter Streaming API
+    def exec():
+        
+        try:
+            l = StdOutListener()
+            auth = OAuthHandler(consumer_key, consumer_secret)
+            auth.set_access_token(access_token, access_token_secret)
+            stream = Stream(auth, l)
+         
+        
+            #This line filter Twitter Streams to capture data by the keywords: 'python', 'javascript', 'ruby'
+            if args != 0:
+                stream.filter(languages=["en"], track=args)
+            else:
+                stream.filter(languages=["en"], track=["Microsoft", "Bill Gates", "MSFT"])
+        #except(HTTPError, URLError) as error:
+            #exec()
+        except Exception as e:
+            if count < 3:
+              exec()
+              count = count + 1
+        else:
+            exec()
+    exec()
+    
+    pos_sentiment_score = 0
+    neg_sentiment_score = 0
+    
+    for word in positive_words:
+      pos_sentiment_score = pos_sentiment_score + pos_dict[word] / freq_dict[word]
+    for word in negative_words:
+      neg_sentiment_score = neg_sentiment_score + neg_dict[word] / freq_dict[word]
+    
+    if pos_sentiment_score > neg_sentiment_score:
+      print('BUY')
+    elif pos_sentiment_score < neg_sentiment_score:
+      print('SELL')
+    else:
+      print('HOLD')
+    
+    
