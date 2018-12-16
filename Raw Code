@@ -1,27 +1,13 @@
-# to store the data in a dataframe
-import pandas 
+"""Pulling the data requires a free quandl account, which is very easy to get. Once you have signed up, you automatically get your API key, and then pip install quandl"""
 
-# to access the api (this library needs to be installed (i.e. with pip or sudo), the others do not)
-import requests
+import quandl
 
-# to properly interpret the results of the request
-import json
+quandl.ApiConfig.api_key = "ENTER API KEY"
 
-#for optional argument parsing
-import sys
+df = quandl.get_table("WIKI/PRICES", ticker = ["MSFT"], 
+qopts = {"columns": ["date", "ticker", "adj_open", "adj_close"]}, paginate=True)
 
-
-import pandas_datareader.data as web
-from datetime import datetime
-
-start_time = datetime.datetime(2017, 1, 1)
-end_time = datetime.datetime.now()
-df = web.DataReader("TSLA", 'morningstar', start_time, end_time)
-df.reset_index(inplace=True)
-df.set_index("Date", inplace=True)
-df = df.drop("Symbol", axis=1)
-
-print(df.head())
+print(df)
 
 print(df.columns())
 
@@ -29,7 +15,7 @@ print(df.columns())
 or alternatively, 'STRONG BUY', 'STRONG SELL', 'WEAK BUY', WEAK SELL' or whatever extension to this you require (instead of just 1, 2, -1, -2), you could
 add a continuous variable to denote confidence in the stock.
 
-Then we use  this column, as well as additional transaction fees, to determine an overall profit or loss."""
+Then we use this column, as well as additional transaction fees, to determine an overall profit or loss."""
 
 
 
