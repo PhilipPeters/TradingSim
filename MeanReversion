@@ -1,0 +1,98 @@
+"""This requires a dataframe from 'RAW CODE'"""
+df = df
+
+"""We will use fees of 0.1% of the stock price, which is completely unrealistic, and not how exchanges work, but as mentioned before, it is just
+for simplicitity, and can easily be changed"""
+
+FEES = 0.001
+
+"""Our implementation of the mean reversion strategy will be as follows: Our assumption is that stock prices tend to go down if they have had recent up moves,
+or go up if they have had recent down moves. Formally, if the current stock price is above some moving average of the stock price, it will probably go down in the near future, and analogously for if it is below.
+Therefore our strategy is to trade in the opposite direction to the recent stock price. We need some actual numbers to make this strategy concrete, and some safety precautions.
+
+For example we need to define our moving average (time period, and weighting, i.e. a 20 day moving average is the mean of the last 20 stock prices, and a 10 day ewm is the exponentially weighted mean of the last 10 prices).
+A precaution is that if the stock pricing is rising very quickly (or surging) this is unrelated to simple time series characteristics, and is probably because of something to do with the company on a macro scale,
+so we decide to trust the trend, not the mean reversion.
+
+We also want to work out how long we should hold our stock, i.e. our waiting time.
+
+Now we need to work out what numbers we need to put these strategies into practie (i.e. 'above' needs to be by a raw difference/percentage. If it is too large, we will hardly ever trade. If it is too small, we will be trading on small, random fluctuations).
+The way we will implement this is simple: just pick 6 numbers, representing percentage changes, and see which number is performing the best in the last 2 or 3 months.
+Simulataneously, do the same for different moving averages.
+
+We will be working with the average of stock open and close price, to simplify matters."""
+
+
+
+"""The below will create new, necessary columns, for our moving averages"""
+df['price'] = 0.5(df['adj_open'] + df['adj_close'])
+
+df['5_lin'] = df['price'].rolling(5).mean()
+df['10_lin'] = df['price'].rolling(10).mean()
+df['20_lin'] = df['price'].rolling(20).mean()
+df['40_lin'] = df['price'].rolling(40).mean()
+
+df['5_ewm'] = df['price'].ewm(halflife = 5).mean()
+df['10_ewm'] = df['price'].ewm(halflife = 10).mean()
+df['20_ewm'] = df['price'].ewm(halflife = 20).mean()
+df['40_ewm'] = df['price'].ewm(halflife = 40).mean()
+
+df['fut_1'] = df['price'].shift(-1)
+df['fut_3'] = df['price'].shift(-3)
+df['fut_5'] = df['price'].shift(-5)
+df['fut_10'] = df['price'].shift(-10)
+
+
+"""We are simply creating a list to iterate over"""
+moving_averages = ['5_lin', '10_lin', '20_lin', '40_lin', '5_ewm', '10_ewm', '20_ewm', '40_ewm']
+waiting_times = ['fut_1, fut_3, fut_5, fut_10']
+
+disp = [0.01, 0.02, 0.04, 0.08, 0.16]
+
+"""Now for simplicity, we will reserve the last three months of data for testing, and the rest for training.
+There are 365 days in a year, but roughly 256 trading days"""
+
+df.fillna(method = 'ffill')
+df.fillna(method = 'bfill')
+
+
+
+"""Splits our data into test data and training data"""
+df_test = df.tail(256)
+df_train = df.head(len(df.price) - 256)
+
+pnl_dict = {}
+
+
+
+"""Now we simply apply a simple strategy (you can only buy or sell 1 unit at a time), and use simple pandas column operations to obtain a PNL value"""
+for avg in moving_averages:
+ for chg in disp:
+   for wait in waiting_times:
+     cash = ((abs(df_train[avg] - df_train['price']) > chg) * np.sign(df_train[avg] - df_train['price']) * df_train[wait]).sum()
+     cash = 0 - cash
+     pos =  ((abs(df_train[avg] - df_train['price']) > chg) * np.sign(df_train[avg] - df_train['price'])).sum()
+     resolved_cash = cash + pos * list(df_train[wait])[-1]
+     fees = FEES*((abs(df_train[avg] - df_train['price']) > chg)).sum()
+     cash_after_fees = resolved_cash - fees
+     
+     pnl_dict[(avg, chg, wait)] = cash_after_fees
+
+
+"""This elegant trick returns the best parameters for our pnl dictionary"""
+inverse = [(value, key) for key, value in pnl_dict.items()]
+best_params = max(inverse)[1]
+
+"""Now to test this on our test data"""
+cash = ((abs(df_test[avg] - df_test['price']) > chg) * np.sign(df_test[avg] - df_test['price']) * df_test[wait]).sum()
+cash = 0 - cash
+pos =  ((abs(df_test[avg] - df_test['price']) > chg) * np.sign(df_test[avg] - df_test['price'])).sum()
+resolved_cash = cash + pos * list(df_test[wait])[-1]
+fees = FEES*((abs(df_test[avg] - df_test['price']) > chg)).sum()
+cash_after_fees = resolved_cash - fees
+
+print("Our profit is $" + cash_after_fees)
+
+
+
+
